@@ -1,5 +1,7 @@
 ## Neural Networks For Pong
 
+![Atari Pong](https://i.ytimg.com/vi/moqeZusEMcA/hqdefault.jpg)
+
 ### Introduction
 
 The code in this repository will let you train a Neural Network to play Pong solely based on the input frames of the game and the results of each round.
