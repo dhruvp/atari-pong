@@ -1,8 +1,14 @@
 ## Neural Networks For Pong
 
+### Introduction
+
+The code in this repository will let you train a Neural Network to play Pong solely based on the input frames of the game and the results of each round.
+The code in `me_pong.py` is intended to be a simpler to follow version of `pong.py` which was written by Andrej Karpathy.
+You can play around with other such Atari games at the [Openai Gym](https://gym.openai.com).
+
 ### Setup
 
-1. Follow the instructions for installing Openai gym [here](https://gym.openai.com/docs). You may need to install `cmake` first.
+1. Follow the instructions for installing Openai Gym [here](https://gym.openai.com/docs). You may need to install `cmake` first.
 2. Run `pip install -e '.[atari]'`.
 3. Run `python me_pong.py`
 
