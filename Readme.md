@@ -6,6 +6,7 @@
 2. Run `pip install -e '.[atari]'`.
 3. Run `python me_pong.py`
 
+Note, if you want to run Andrej Karpathy's original code, run `python pong.py`.
 
 ### Seeing the game
 
