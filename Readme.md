@@ -6,7 +6,15 @@
 2. Run `pip install -e '.[atari]'`.
 3. Run `python me_pong.py`
 
+### Misc.
+
 Note, if you want to run Andrej Karpathy's original code, run `python pong.py`.
+
+### Performance
+
+According to the blog post, this algorithm should take around 3 days of training on a Macbook to start beating the computer.
+
+Consider tweaking the hyperparameters or using CNNs to boost the performance further.
 
 ### Seeing the game
 

@@ -1,32 +1,35 @@
 ## Architecture
 
-# Take in inputs from the screen
+# Take in inputs from the screen and preprocess them
 # Pass them into an NN
-# Update the weights of the NN in some way based on the results
-# w1 - Matrix that holds weights of pixels passing into hidden layer. Dimensions: [200 x 80 x 80] -> [200 x 6400]
-# w2 - Matrix that holds weights of hidden layer passing into output. Dimensions: [1 x 200]
+# Update the weights of the NN using gradient descent
+# weights['1'] - Matrix that holds weights of pixels passing into hidden layer. Dimensions: [200 x 80 x 80] -> [200 x 6400]
+# weights['2'] - Matrix that holds weights of hidden layer passing into output. Dimensions: [1 x 200]
 
 # Process is:
 
-# x = image vector - [6400 x 1] array
-# Compute h = w1 dot x ([200 x 6400] dot [6400 x 1]) -> [200 x 1] - this gives initial activation values.
+# processed_observations = image vector - [6400 x 1] array
+# Compute hidden_layer_values = weights['1'] dot processed_observations ([200 x 6400] dot [6400 x 1]) -> [200 x 1] - this gives initial activation values.
 # Next we need to transform those either via a sigmoid or an ReLU of some sort. Let's use ReLU
-# h[h<0] = 0
+# ReLU(hidden_layer_values)
 # Next we need to pass this one layer further
-# output = w2 dot h = [1 x 200] dot [200 x 1] -> [1 x 1]
+# output_layer_value = weights['2'] dot hidden_layer_values ([1 x 200] dot [200 x 1] -> [1 x 1])
 # Now our output layer is the probability of going up or down. Let's make sure this output is between 0 and 1 by passing it through a sigmoid
-# p = sigmoid(output)
+# p = sigmoid(output_layer_value)
 
-# Learning:
+# Learning after round has finished:
 
 # Figure out the result
 # Compute the error
 # Use the error to calculate the gradient
-    # dw2 = eph^T dot gradient_log_p = [1 x 2000] dot [2000 x 1] = 1x1
-    # dh = gradient_log_p outer_product w2 = [2000 x 1] outer_product [1 x 200] = [2000 x 200]
-    # dw1 = dh^T dot epx = [200 x 2000]x dot [2000 x 64000] = [200 x 64000]
-# After some batch size has finished,
-    # Use rmsprop to move w1 and w2 in the direction of the gradient
+    # The below dimensions all assume we had exactly 10 frames in the round (not necessarily true!)
+    # dC_dw2 = hidden_layer_values^T dot gradient_log_p ([1 x 2000] dot [2000 x 1] -> 1x1)
+    # delta_1 = gradient_log_p outer_product weights['2'] = [2000 x 1] outer_product [1 x 200] ([2000 x 200])
+    # dC_dw1 = delta_1^T dot input_observations ([200 x 2000]x dot [2000 x 64000] -> [200 x 64000])
+
+# After some batch size of rounds has finished,
+    # Use rmsprop to move weights['1'] and weights['2'] in the direction of the gradient
+# Repeat!
 
 import gym
 import numpy as np
