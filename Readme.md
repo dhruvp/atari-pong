@@ -3,7 +3,7 @@
 ### Setup
 
 1. Follow the instructions for installing Openai gym [here](https://gym.openai.com/docs). You may need to install `cmake` first.
-2. Run pip install -e '.[atari]'.
+2. Run `pip install -e '.[atari]'`.
 3. Run `python me_pong.py`
 
 
