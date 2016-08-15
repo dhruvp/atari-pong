@@ -28,13 +28,17 @@
 # After some batch size has finished,
 	# Use rmsprop to move w1 and w2 in the direction of the gradient
 
-def downsample=(image):
+import gym
+import numpy as np
+
+
+def downsample(image):
 	return image[::2, ::2, :]
 
 def remove_color(image):
 	return image[:, :, 0]
 
-def remove_background:
+def remove_background(image):
 	image[image == 144] = 0
 	image[image == 109] = 0
 	return image
@@ -42,7 +46,7 @@ def remove_background:
 def preprocess_observations(observation):
   """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
   observation = observation[35:195] # crop
-  observation = downsample(cropped_observation)
+  observation = downsample(observation)
   observation = remove_color(observation)
   observation = remove_background(observation)
   observation[observation != 0] = 1 # everything else (paddles, ball) just set to 1
@@ -56,10 +60,10 @@ def relu(vector):
 	new_vec[new_vec < 0] = 0
 	return new_vec
 
-def apply_neural_nets(observation_matrix, layer_1_weights, layer_2_weights):
-	hidden_layer_values = np.dot(observation_matrix, layer_1_weights)
+def apply_neural_nets(observation_matrix, weights):
+	hidden_layer_values = np.dot(observation_matrix, weights['1'])
 	hidden_layer_values = relu(hidden_layer_output)
-	output_layer_values = np.dot(hidden_layer_values, layer_2_weights)
+	output_layer_values = np.dot(hidden_layer_values, weights['2'])
 	output_layer_values = sigmoid(output_layer_values)
 	return hidden_layer_values, output_layer_values
 
@@ -74,7 +78,7 @@ def compute_gradient(gradient_log_p, hidden_layer_values, observation_values, we
 	delta_L = gradient_log_p
 	dC_dw2 = np.dot(hidden_layer_values, delta_L)
 	delta_1 = np.outer(gradient_log_p, weights['2'])
-	delta_1[delta_1 <= 0] = 0
+	delta_1[hidden_layer_values <= 0] = 0
 	dC_dw1 = np.dot(observation_values, weights['1'])
 	return {
 		'1': dC_dw1,
@@ -90,6 +94,25 @@ def update_weights(gradient, weights, expectation_g_squared, g_dict):
 		weights[layer_name] =  weights[layer_name] - (learning_rate * g)/(np.sqrt(expectation_g_squared[layer_name] + epsilon))
         g_dict[k] = np.zeros_like(weights[layer_name]) # reset batch gradient buffer
 
+def discount_rewards(rewards, gamma):
+  discounted_rewards = np.zeros_like(rewards)
+  running_add = 0
+  for t in reversed(xrange(0, rewards.size)):
+    if rewards[t] != 0:
+    	running_add = 0 # reset the sum, since this was a game boundary (pong specific!)
+    running_add = running_add * gamma + rewards[t]
+    discounted_rewards[t] = running_add
+  return discounted_rewards
+
+def discount_with_rewards(gradient_log_p, episode_rewards, gamma):
+    # compute the discounted reward backwards through time
+    discounted_episode_rewards = discount_rewards(episode_rewards, gamma)
+    # standardize the rewards to be unit normal (helps control the gradient estimator variance)
+    discounted_episode_rewards -= np.mean(discounted_episode_rewards)
+    discounted_episode_rewards /= np.std(discounted_episode_rewards)
+    return gradient_log_p * discounted_episode_rewards
+
+
 env = gym.make("Pong-v0")
 observation = env.reset()
 episode_number = 0
@@ -97,39 +120,49 @@ batch_size = 10
 gradient_log_p = []
 episode_hidden_layer_values = []
 episode_observations = []
+episode_rewards = []
+gamma = 0.99 # discount factor for reward
+num_hidden_layer_neurons = 200
+input_dimensions = 80 * 80
 
 weights = {
-	'1': [],
-	'2': []
+	'1': np.random.randn(num_hidden_layer_neurons, input_dimensions) / np.sqrt(input_dimensions),
+	'2': np.random.randn(num_hidden_layer_neurons) / np.sqrt(num_hidden_layer_neurons)
 }
 
 expectation_g_squared = {}
+g_dict = {}
 
 for layer_name in weights.keys():
-	expectation_g_squared[layer_name] = 0
-
+	expectation_g_squared[layer_name] = np.zeros_like(weights[layer_name])
+	g_dict[layer_name] = np.zeros_like(weights[layer_name])
 
 while True:
 	processed_observations = preprocess_observations(observation)
 	episode_observations.append(processed_observations)
-	up_probability = apply_neural_nets(processed_observations)
+	up_probability = apply_neural_nets(processed_observations, weights)
 	hidden_layer_values, action = choose_action(up_probability)
 	episode_hidden_layer_values.append(hidden_layer_values)
 	# carry out the chosen action
 	observation, reward, done, info = env.step(action)
+	episode_rewards.append(reward)
 
 	fake_label = 1 if action == 2 else 0
 	# see here: http://cs231n.github.io/neural-networks-2/#losses
 	episode_gradient_log_ps.append(fake_label - up_probability)
-	episode_hidden_layer_values = np.vstack(hidden_layer_values)
 
 	if done: # an episode finished
-    	episode_number += 1
-    	episode_hidden_layer_values = np.vstack(episode_hidden_layer_values)
-    	episode_observations = np.vstack(episode_observations)
-    	episode_gradient_log_ps = np.vstack(episode_gradient_log_ps)
-    	for key in gradient: g_dict[key] += gradient[key]
-    	gradient = compute_gradient(episode_gradient_log_ps, episode_hidden_layer_values, episode_observations, weights, g_dict)
-    	if episode_number % batch_size == 0:
-    		update_weights(gradient, weights_dict)
-    	episode_hidden_layer_values, episode_observations, episode_gradient_log_ps = [], [], []
+		episode_number = episode_number + 1
+		episode_hidden_layer_values = np.vstack(episode_hidden_layer_values)
+		episode_observations = np.vstack(episode_observations)
+		episode_gradient_log_ps = np.vstack(episode_gradient_log_ps)
+		episode_rewards = np.vstack(episode_rewards)
+		episode_gradient_log_ps_discounted = discount_with_rewards(episode_gradient_log_ps, episode_rewards, gamma)
+
+		for key in gradient: g_dict[key] += gradient[key]
+		gradient = compute_gradient(episode_gradient_log_ps_discounted, episode_hidden_layer_values, episode_observations, weights, g_dict)
+
+		if episode_number % batch_size == 0:
+			update_weights(gradient, weights_dict)
+		episode_hidden_layer_values, episode_observations, episode_gradient_log_ps = [], [], []
+		observation = env.reset() # reset env
