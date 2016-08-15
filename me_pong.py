@@ -85,6 +85,7 @@ def choose_action(probability):
         return 3
 
 def compute_gradient(gradient_log_p, hidden_layer_values, observation_values, weights):
+    # See here: http://neuralnetworksanddeeplearning.com/chap2.html
     delta_L = gradient_log_p
     dC_dw2 = np.dot(hidden_layer_values.T, delta_L).ravel()
     delta_1 = np.outer(gradient_log_p, weights['2'])
@@ -96,7 +97,7 @@ def compute_gradient(gradient_log_p, hidden_layer_values, observation_values, we
     }
 
 def update_weights(weights, expectation_g_squared, g_dict, decay_rate, learning_rate):
-    # http://sebastianruder.com/optimizing-gradient-descent/index.html#rmsprop
+    # See here: http://sebastianruder.com/optimizing-gradient-descent/index.html#rmsprop
     epsilon = 1e-5
     for layer_name in weights.keys():
         g = g_dict[layer_name]
@@ -142,9 +143,9 @@ def main():
         '2': np.random.randn(num_hidden_layer_neurons) / np.sqrt(num_hidden_layer_neurons)
     }
 
+    # To be used with rmsprop algorithm
     expectation_g_squared = {}
     g_dict = {}
-
     for layer_name in weights.keys():
         expectation_g_squared[layer_name] = np.zeros_like(weights[layer_name])
         g_dict[layer_name] = np.zeros_like(weights[layer_name])
@@ -177,14 +178,15 @@ def main():
             episode_observations = np.vstack(episode_observations)
             episode_gradient_log_ps = np.vstack(episode_gradient_log_ps)
             episode_rewards = np.vstack(episode_rewards)
-            episode_gradient_log_ps_discounted = discount_with_rewards(episode_gradient_log_ps, episode_rewards, gamma)
 
+            episode_gradient_log_ps_discounted = discount_with_rewards(episode_gradient_log_ps, episode_rewards, gamma)
             gradient = compute_gradient(
               episode_gradient_log_ps_discounted,
               episode_hidden_layer_values,
               episode_observations,
               weights
             )
+
             for layer_name in gradient:
                 g_dict[layer_name] += gradient[layer_name]
 
