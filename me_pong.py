@@ -43,7 +43,7 @@ def remove_background(image):
     return image
 
 def preprocess_observations(input_observation, prev_processed_observation, input_dimensions):
-    """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
+    """ convert the 210x160x3 uint8 frame into a 6400 float vector """
     processed_observation = input_observation[35:195] # crop
     processed_observation = downsample(processed_observation)
     processed_observation = remove_color(processed_observation)
@@ -154,10 +154,11 @@ def main():
         processed_observations, prev_processed_observations = preprocess_observations(observation, prev_processed_observations, input_dimensions)
         episode_observations.append(processed_observations)
         hidden_layer_values, up_probability = apply_neural_nets(processed_observations, weights)
-        action = choose_action(up_probability)
-
         episode_hidden_layer_values.append(hidden_layer_values)
 
+        action = choose_action(up_probability)
+
+        # see here: http://cs231n.github.io/neural-networks-2/#losses
         fake_label = 1 if action == 2 else 0
         episode_gradient_log_ps.append(fake_label - up_probability)
 
@@ -166,10 +167,9 @@ def main():
         reward_sum += reward
 
         episode_rewards.append(reward)
-        # see here: http://cs231n.github.io/neural-networks-2/#losses
 
         if done: # an episode finished
-            episode_number = episode_number + 1
+            episode_number += 1
             episode_hidden_layer_values = np.vstack(episode_hidden_layer_values)
             episode_observations = np.vstack(episode_observations)
             episode_gradient_log_ps = np.vstack(episode_gradient_log_ps)
@@ -182,8 +182,8 @@ def main():
               episode_observations,
               weights
             )
-            for key in gradient:
-                g_dict[key] += gradient[key]
+            for layer_name in gradient:
+                g_dict[layer_name] += gradient[layer_name]
 
             if episode_number % batch_size == 0:
                 update_weights(weights, expectation_g_squared, g_dict, decay_rate, learning_rate)
