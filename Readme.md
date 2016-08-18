@@ -76,7 +76,7 @@ We are given the following:
   - An opponent agent that is the traditional Pong computer player
   - An agent we control that we can tell to move up or down at each frame
 
-Can we use these pieces, to train our agent to beat the computer? Moreover, can we make our solution generic enough so it can be reused to win in games different from pong?
+Can we use these pieces to train our agent to beat the computer? Moreover, can we make our solution generic enough so it can be reused to win in games that aren't pong?
 
 #### Solution
 
@@ -105,6 +105,10 @@ The code starts in the `main` function. Let's go step by step.
 
 Here, we use OpenAi Gym to make our game environment and then call `env.reset()` to get our first input image. This will be an image of the game at the very beginning.
 
+
+
+Next, we set a bunch of hyperparameters based off of Andrej's blog post.
+
 ```python
     batch_size = 10
     gamma = 0.99 # discount factor for reward
@@ -113,8 +117,7 @@ Here, we use OpenAi Gym to make our game environment and then call `env.reset()`
     input_dimensions = 80 * 80
     learning_rate = 1e-4
 ```
-
-Next, we set a bunch of hyperparameters based off of Andrej's blog post. We aren't going to worry about tuning them but note that you can probably get better performance by doing so.
+We aren't going to worry about tuning them but note that you can probably get better performance by doing so.
 Let's just spend a minute on each parameter:
   - `batch_size`: how many rounds we play before updating the weights of our network.
   - `gamma`: The discount factor we use to discount the effect of old actions on the final result.
@@ -122,15 +125,15 @@ Let's just spend a minute on each parameter:
   - `num_hidden_layer_neurons`: How many neurons are in our hidden layer.
   - `learning_rate`: The rate at which we learn from our results to compute the new weights. A higher rate means we react more to results and a lower rate means we don't react as strongly to each result.
 
+Then, we set a bunch of counters and initial values. Nothing to really see here.
+
 ```python
     episode_number = 0
     reward_sum = 0
     running_reward = None
     prev_processed_observations = None
 ```
-
-This just sets a bunch of counters and initial values. Nothing to really see here.
-
+After that, we set up the initial weights in our Neural Network.
 
 ```python
     weights = {
@@ -139,14 +142,15 @@ This just sets a bunch of counters and initial values. Nothing to really see her
     }
 ```
 
-Here, we set up the initial weights in our Neural Network.
-
 Weights are stored in matrices. For layer 1, element `w1_ij` represents the 
 weight of hidden layer `i` for input pixel `j`.
 Layer 1 is a `200 x 6400` matrix representing the weights for our hidden layer.
 
 For layer 2, element `w2_i` represents the weights of output of hidden layer `i`.
 Layer 2 is a `200 x 1` matrix representing the weights of the output of the hidden layer on our final output.
+
+The below then sets up initial parameters for RmsProp. See [here](http://sebastianruder.com/optimizing-gradient-descent/index.html#rmsprop) for more information.
+
 
 ```python
     # To be used with rmsprop algorithm (http://sebastianruder.com/optimizing-gradient-descent/index.html#rmsprop)
@@ -157,14 +161,13 @@ Layer 2 is a `200 x 1` matrix representing the weights of the output of the hidd
         g_dict[layer_name] = np.zeros_like(weights[layer_name])
 ```
 
-This sets up initial parameters for RmsProp. See [here](http://sebastianruder.com/optimizing-gradient-descent/index.html#rmsprop) for more information.
+We'll need to collect a bunch of observations and intermediate values across the episode and use those to compute the gradient at the end based on the result.
+This sets up the arrays where we'll collect all that information.
+
 
 ```python
     episode_hidden_layer_values, episode_observations, episode_gradient_log_ps, episode_rewards = [], [], [], []
 ```
-
-We'll need to collect a bunch of observations and intermediate values across the episode and use those to compute the gradient at the end based on the result.
-This sets up the arrays where we'll collect all that information.
 
 Now that we're done setting up, let's jump in to the main part of our algorithm.
 
