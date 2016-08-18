@@ -37,7 +37,7 @@ This is based off of the work of Andrej Karpathy's great blog post and code [her
 
 ## Tutorial
 
-There's something very different between reading about a neural network and actually writing one yourself and seeing it do something amazing. This tutorial is all about
+There's a huge difference between reading the theory of a neural network and actually writing one yourself and seeing it do something amazing. This tutorial is all about
 getting you to write your own neural network and feel ownership as you see it learn more and more as it finally becomes good enough to beat the computer in pong!
 
 By the end of this tutorial, you'll be able to do the following:
