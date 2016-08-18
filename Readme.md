@@ -128,11 +128,13 @@ Let's just spend a minute on each parameter:
 Then, we set a bunch of counters and initial values. Nothing to really see here.
 
 ```python
-    episode_number = 0
-    reward_sum = 0
-    running_reward = None
-    prev_processed_observations = None
+    batch_size = 10
+    gamma = 0.99 # discount factor for reward
+    decay_rate = 0.99
+    num_hidden_layer_neurons = 200
+    learning_rate = 1e-4
 ```
+
 After that, we set up the initial weights in our Neural Network.
 
 ```python
@@ -231,10 +233,14 @@ As you can see, it's not many steps at all! Let's go step by step:
 1. Compute the unprocessed hidden layer values by simply finding the dot product of `Weights['1']` and `observation_matrix`.
 If you remember, `Weights[1]` is a `200 x 6400` matrix and observations_matrix is a `6400 x 1` matrix. So the dot product will give us a matrix of dimensions
 `200 x 1`. This checks out! We have 200 neurons and so each row represents the output of one neuron.
+
 2. Next, we apply a thresholding function on those hidden layer values - in this case just a simple ReLU.
+
 3. We then use those hidden layer values to calculate the output layer values. This is done by a simple dot product of
 `hidden_layer_values (200 x 1)` and `weights['2'] (200 x 1)` which yields a single value (1 x 1).
+
 4. We then apply a sigmoid function on this output value so that it's between 0 and 1 and is therefore a valid probability (probability of going up).
+
 5. That's it! That's really all there is to taking an observation and computing the probability of going up!
 
 Let's return to the main algorithm and see what happens next:
