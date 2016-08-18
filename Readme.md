@@ -62,10 +62,9 @@ Ok let's get started!
 Ok before we get started, let's go over the architecture of what's about to happen. I strongly suggest you read the [blog post](http://karpathy.github.io/2016/05/31/rl/) based 
 on which all of this is based. If you want a further primer into Neural Networks, there are some great resources to learn more (I'm biased - Udacity employee):
 
-  - Deep Learning Book: 
-  - Udacity Supervised Learning:
-  - Udacity Deep Learning:
-
+  - [Udacity Deep Learning](https://www.udacity.com/course/deep-learning--ud730)
+  - [Udacity Supervised Learning](https://www.udacity.com/course/machine-learning-supervised-learning--ud675)
+  - [Deep Learning Book](http://neuralnetworksanddeeplearning.com/)
 
 So now let's get to problem solving. Here's the problem:
 
