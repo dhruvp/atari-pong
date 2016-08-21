@@ -33,7 +33,6 @@
 
 import gym
 import numpy as np
-import pdb
 
 def downsample(image):
     # Take only alternate pixels - basically halves the resolution of the image (which is fine for us)
@@ -79,7 +78,6 @@ def apply_neural_nets(observation_matrix, weights):
     """ Based on the observation_matrix and weights, compute the new hidden layer values and the new output layer values"""
     hidden_layer_values = np.dot(weights['1'], observation_matrix)
     hidden_layer_values = relu(hidden_layer_values)
-    pdb.set_trace()
     output_layer_values = np.dot(hidden_layer_values, weights['2'])
     output_layer_values = sigmoid(output_layer_values)
     return hidden_layer_values, output_layer_values
@@ -97,9 +95,9 @@ def compute_gradient(gradient_log_p, hidden_layer_values, observation_values, we
     """ See here: http://neuralnetworksanddeeplearning.com/chap2.html"""
     delta_L = gradient_log_p
     dC_dw2 = np.dot(hidden_layer_values.T, delta_L).ravel()
-    delta_1 = np.outer(gradient_log_p, weights['2'])
-    delta_1 = relu(delta_1)
-    dC_dw1 = np.dot(delta_1.T, observation_values)
+    delta_l2 = np.outer(delta_L, weights['2'])
+    delta_l2 = relu(delta_l2)
+    dC_dw1 = np.dot(delta_l2.T, observation_values)
     return {
         '1': dC_dw1,
         '2': dC_dw2
@@ -169,10 +167,11 @@ def main():
 
 
     while True:
-        # env.render()
+        env.render()
         processed_observations, prev_processed_observations = preprocess_observations(observation, prev_processed_observations, input_dimensions)
-        episode_observations.append(processed_observations)
         hidden_layer_values, up_probability = apply_neural_nets(processed_observations, weights)
+    
+        episode_observations.append(processed_observations)
         episode_hidden_layer_values.append(hidden_layer_values)
 
         action = choose_action(up_probability)

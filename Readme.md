@@ -88,8 +88,8 @@ Our Neural Network, based completely on Andrej's solution, will look like this:
 2. Use the Neural Network to compute a probability of moving up.
 3. Sample from that probability distribution and tell the agent to move up or down.
 4. If the round is over (you missed the ball or the oponent missed the ball), find whether you won or lost.
-5. Pass the result through the backpropagation algorithm to compute the graient for our weights.
-6. After a full game has finished (someone got to 21 points), sum up the gradient and move the weights in the direction of the gradient.
+5. When the episode has finished(someone got to 21 points), pass the result through the backpropagation algorithm to compute the graient for our weights.
+6. After 10 episodes have finished, sum up the gradient and move the weights in the direction of the gradient.
 7. Repeat this process until our weights are tuned to the point where we can beat the computer.
 
 That's basically it! Let's start looking at how our code achieves this.
@@ -246,9 +246,9 @@ If you remember, `Weights[1]` is a `200 x 6400` matrix and observations_matrix i
 Let's return to the main algorithm and see what happens next:
 
 ```python
-        episode_hidden_layer_values.append(hidden_layer_values)
+    episode_hidden_layer_values.append(hidden_layer_values)
 
-        action = choose_action(up_probability)
+    action = choose_action(up_probability)
 ```
 
 In the above two lines, we record the `hidden_layer_values` for future reference (we'll use it to learn and improve the weights) and we then choose an action based on the probability of going up.
@@ -279,9 +279,9 @@ Our predicted classification is going to be the probability of going up. Using t
 
 
 ```python
-        # see here: http://cs231n.github.io/neural-networks-2/#losses
-        fake_label = 1 if action == 2 else 0
-        loss_function_gradient = fake_label - up_probability
+    # see here: http://cs231n.github.io/neural-networks-2/#losses
+    fake_label = 1 if action == 2 else 0
+    loss_function_gradient = fake_label - up_probability
 ```
 
 Awesome.
@@ -294,11 +294,11 @@ When we notice we are done, the first thing we do is compile all our observation
 This allows us to apply our learnings for every action we took in this episode.
 
 ```python
-            # Combine the following values for the episode
-            episode_hidden_layer_values = np.vstack(episode_hidden_layer_values)
-            episode_observations = np.vstack(episode_observations)
-            episode_gradient_log_ps = np.vstack(episode_gradient_log_ps)
-            episode_rewards = np.vstack(episode_rewards)
+    # Combine the following values for the episode
+    episode_hidden_layer_values = np.vstack(episode_hidden_layer_values)
+    episode_observations = np.vstack(episode_observations)
+    episode_gradient_log_ps = np.vstack(episode_gradient_log_ps)
+    episode_rewards = np.vstack(episode_rewards)
 ```
 
 Next, we want to learn in such a way that actions taken towards the end of an episode more heavily influence our learning than actions taken at the beginning.
@@ -309,28 +309,75 @@ your paddle reaches the ball and how your paddle hits the ball.
 We're going to accomplish this by discounting our rewards such that rewards from earlier frames are discounted a lot more than rewards for later frames.
 
 ```python
-            # TWeak the gradient of the log_ps based on the discounted rewards
-            episode_gradient_log_ps_discounted = discount_with_rewards(episode_gradient_log_ps, episode_rewards, gamma)
+    # Tweak the gradient of the log_ps based on the discounted rewards
+    episode_gradient_log_ps_discounted = discount_with_rewards(episode_gradient_log_ps, episode_rewards, gamma)
 ```
 
 Next, we're going to finally use backpropagation to compute the gradient (i.e. the direction we need to move our weights in to improve).
 
 ```python
-            gradient = compute_gradient(
-              episode_gradient_log_ps_discounted,
-              episode_hidden_layer_values,
-              episode_observations,
-              weights
-            )
+    gradient = compute_gradient(
+        episode_gradient_log_ps_discounted,
+        episode_hidden_layer_values,
+        episode_observations,
+        weights
+    )
 ```
 
-#### INSERT COOL GRADIENT EXPLANATION HERE
+Let's dig in a bit into how the gradient is computed. This is one of the most important parts of Neural Networks as it's how our 
+agent figures out how to improve over time.
+
+To begin with, if you haven't already, do read [this](http://neuralnetworksanddeeplearning.com/chap2.html) from Michael Nielsen's excellent free book to get a deeper sense of
+how this works. 
+
+Here are the four fundamental equations of backpropogation, a technique for computing the gradient for our cost function.
+
+![](http://neuralnetworksanddeeplearning.com/images/tikz21.png)
+
+Our goal is to find dC_dw1, the derivative of the cost function with respect to the first layer's weights, and dC_dw2, the derivative of the cost function with respect to the second layer's weights.
+To begin with, let's start with `dC_dw2`. From the above image, we see that the formula is:
+
+`dC_dw2 = A^(2) dot delta_L`
+
+`dC_dw2 = hidden_layer_values dot delta_L`
+
+Indeed, this is exactly what we do here:  
+
+```python
+    delta_L = gradient_log_p
+    dC_dw2 = np.dot(hidden_layer_values.T, delta_L).ravel()
+```
+
+Next, we need to calculate `dC_dw1`. The formula for that is:
+
+`dc_dw1 = A^(1) dot delta_2`
+
+`dc_dw1 = observation_values dot delta_2`
+
+So all we need now is `delta_2`. We calculate that below:
+
+```python
+    delta_2 = np.outer(delta_L, weights['2'])
+    delta_2 = relu(delta_2)
+```
+
+And we then just plug this into the above equation:
+
+```python
+    dC_dw1 = np.dot(delta_2.T, observation_values)
+    return {
+        '1': dC_dw1,
+        '2': dC_dw2
+    }
+```
+
+With that, we've finished backpropagation and computed our gradients!
 
 After we have finished `batch_size` episodes, we finally update our weights for our Neural Network and implement our learnings.
 
 ```python
-            if episode_number % batch_size == 0:
-                update_weights(weights, expectation_g_squared, g_dict, decay_rate, learning_rate)
+    if episode_number % batch_size == 0:
+        update_weights(weights, expectation_g_squared, g_dict, decay_rate, learning_rate)
 ```
 
 This is the step that tweaks our Neural Network weights and allows us to get better over time. It moves the weights in the direction of the gradient we computed so that 
